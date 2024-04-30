@@ -3,10 +3,15 @@ import pandas as pd
 import requests
 from io import StringIO
 
-# Constants
-VINSOLUTIONS_BASE_URL = "https://feeds.amp.auto/feeds/vinsolutions/"
-DEALERDOTCOM_URL = "https://feeds.amp.auto/feeds/coxautomotive/dealerdotcom.csv"
-API_URL = "https://hook.us1.make.com/ae3j7yvt16erp88q4ygnb4kh0n9xg6qq"
+# Password protection
+password = st.text_input("Enter password", type="password")
+if password != "G@rber":
+    st.stop()
+else:
+    # Constants
+    VINSOLUTIONS_BASE_URL = "https://feeds.amp.auto/feeds/vinsolutions/"
+    DEALERDOTCOM_URL = "https://feeds.amp.auto/feeds/coxautomotive/dealerdotcom.csv"
+    API_URL = "https://hook.us1.make.com/ae3j7yvt16erp88q4ygnb4kh0n9xg6qq"
 
 # Helper functions
 def download_csv(url):
