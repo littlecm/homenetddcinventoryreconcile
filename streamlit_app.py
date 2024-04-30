@@ -49,7 +49,7 @@ vinsolutions_filenames = [
 ]
 
 # Application
-st.title("VIN Reconciliation Tool")
+st.title("GMG Dealer.com VIN Reconciliation Tool")
 
 # User Inputs
 selected_filename = st.selectbox("Select a VinSolutions CSV filename:", vinsolutions_filenames)
