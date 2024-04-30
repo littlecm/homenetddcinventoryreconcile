@@ -57,6 +57,7 @@ selected_type = st.selectbox("Select the vehicle type:", ["All", "New", "Used"])
 dealerdotcom_data = download_csv(DEALERDOTCOM_URL)
 dealer_ids = dealerdotcom_data['dealer_id'].unique()
 selected_dealer_id = st.selectbox("Select a Dealer ID:", dealer_ids)
+enable_api_call = st.checkbox("Enable API Call for VIN reconciliation")
 
 if st.button("Reconcile Data"):
     vinsolutions_data = download_csv(VINSOLUTIONS_BASE_URL + selected_filename)
@@ -75,17 +76,31 @@ if st.button("Reconcile Data"):
     results = []
     for vin in common_vins:
         results.append({'VIN': vin, 'Result': "Common"})
-    for vin in unique_vinsolutions.union(unique_dealerdotcom):
-        api_data = get_api_data(vin)
-        if api_data:
-            if api_data.get("status") == "recall":
-                results.append({'VIN': vin, 'Result': "Vehicle with Recall"})
-            elif api_data.get("status"):
-                results.append({'VIN': vin, 'Result': api_data.get("status")})
+    if enable_api_call:
+        for vin in unique_vinsolutions.union(unique_dealerdotcom):
+            api_data = get_api_data(vin)
+            if api_data:
+                # Process API data similar to the initial request
+                if "mathBox" in api_data and "recallInfo" in api_data["mathBox"] and "This vehicle is temporarily unavailable" in api_data["mathBox"]["recallInfo"]:
+                    results.append({'VIN': vin, 'Result': "Vehicle with Recall"})
+                elif "inventoryStatus" in api_data:
+                    inventory_status = api_data["inventoryStatus"].get("name")
+                    if inventory_status:
+                        if inventory_status == "Rtl_Intrans" and vin in unique_dealerdotcom:
+                            results.append({'VIN': vin, 'Result': "In Transit - Not expected in HomeNet"})
+                        elif inventory_status == "EligRtlStkCT":
+                            results.append({'VIN': vin, 'Result': "Courtesy Vehicle"})
+                        else:
+                            results.append({'VIN': vin, 'Result': f"Other Inventory Status: {inventory_status}"})
+                    else:
+                        if vin in unique_dealerdotcom:
+                            results.append({'VIN': vin, 'Result': "Exclusive to Dealer.com Website"})
+                        else:
+                            results.append({'VIN': vin, 'Result': "Exclusive to HomeNet"})
+                else:
+                    results.append({'VIN': vin, 'Result': "Status Unknown"})
             else:
-                results.append({'VIN': vin, 'Result': "Status Unknown"})
-        else:
-            results.append({'VIN': vin, 'Result': "API request failed"})
+                results.append({'VIN': vin, 'Result': "API request failed"})
 
     results_df = pd.DataFrame(results)
     st.dataframe(results_df)
