@@ -49,7 +49,7 @@ vinsolutions_filenames = [
 ]
 
 # Application
-st.title("VIN Reconciliation Tool")
+st.title("GMG DDC VIN Reconciliation Tool")
 
 # User Inputs
 selected_filename = st.selectbox("Select a VinSolutions CSV filename:", vinsolutions_filenames)
@@ -60,6 +60,11 @@ selected_dealer_id = st.selectbox("Select a Dealer ID:", dealer_ids)
 enable_api_call = st.checkbox("Enable API Call for VIN reconciliation")
 
 if st.button("Reconcile Data"):
+    # Initialize the progress bar
+    progress = st.progress(0)
+    total_operations = len(common_vins) + len(unique_vinsolutions.union(unique_dealerdotcom))
+    operations_done = 0
+
     vinsolutions_data = download_csv(VINSOLUTIONS_BASE_URL + selected_filename)
     if selected_type != "All":
         vinsolutions_data = vinsolutions_data[vinsolutions_data['Type'] == selected_type]
@@ -76,11 +81,14 @@ if st.button("Reconcile Data"):
     results = []
     for vin in common_vins:
         results.append({'VIN': vin, 'Result': "Common"})
+        operations_done += 1
+        progress.progress(operations_done / total_operations)
+        
     if enable_api_call:
         for vin in unique_vinsolutions.union(unique_dealerdotcom):
             api_data = get_api_data(vin)
             if api_data:
-                # Process API data similar to the initial request
+                # Example of processing API data
                 if "mathBox" in api_data and "recallInfo" in api_data["mathBox"] and "This vehicle is temporarily unavailable" in api_data["mathBox"]["recallInfo"]:
                     results.append({'VIN': vin, 'Result': "Vehicle with Recall"})
                 elif "inventoryStatus" in api_data:
@@ -101,6 +109,8 @@ if st.button("Reconcile Data"):
                     results.append({'VIN': vin, 'Result': "Status Unknown"})
             else:
                 results.append({'VIN': vin, 'Result': "API request failed"})
+            operations_done += 1
+            progress.progress(operations_done / total_operations)
 
     results_df = pd.DataFrame(results)
     st.dataframe(results_df)
@@ -109,3 +119,7 @@ if st.button("Reconcile Data"):
     summary_df = results_df['Result'].value_counts().reset_index()
     summary_df.columns = ['Issue', 'Count']
     st.dataframe(summary_df)
+
+    # Reset progress bar
+    progress.empty()
+
